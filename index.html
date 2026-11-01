@@ -9,32 +9,32 @@
 *{box-sizing:border-box}
 body{margin:0;background:#0b1020;color:#edf2ff;font-family:Arial,sans-serif}
 header{padding:22px;background:#121a30;border-bottom:1px solid #28344e}
-h1{margin:0;color:#9c8cff;font-size:24px}
+h1{margin:0;color:#a18cff;font-size:23px}
 small{color:#9eabc4}
-main{max-width:1000px;margin:auto;padding:16px}
+main{max-width:1100px;margin:auto;padding:16px}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
 .card{background:#151f36;padding:15px;border:1px solid #293653;border-radius:12px}
-.value{font-size:22px;font-weight:bold;margin-top:8px}
-input,button{padding:13px;border-radius:9px;border:1px solid #34415e;font-size:15px}
+.value{font-size:21px;font-weight:bold;margin-top:8px}
+button,input{padding:13px;border-radius:9px;border:1px solid #34415e;font-size:14px}
+button{background:#8269ff;color:white;border:0;font-weight:bold;cursor:pointer}
 input{background:#111a2d;color:white;min-width:0;flex:1}
-button{background:#8269ff;color:white;border:0;font-weight:bold}
-.search{display:flex;gap:8px;margin:18px 0}
-table{width:100%;border-collapse:collapse;min-width:600px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.notice{background:#28233f;padding:13px;border-radius:10px;color:#c9c0ff;font-size:13px;line-height:1.5}
+.tablewrap{overflow-x:auto;background:#151f36;border-radius:12px}
+table{width:100%;border-collapse:collapse;min-width:760px}
 th,td{text-align:left;padding:12px;border-bottom:1px solid #293653;font-size:13px}
 th{color:#9eabc4}
-.tablewrap{overflow-x:auto;background:#151f36;border-radius:12px}
-.green{color:#4ce0a0}.red{color:#ff7777}
-.token{font-weight:bold}
 .section{margin-top:24px}
-.notice{background:#28233f;padding:13px;border-radius:10px;color:#c9c0ff;font-size:13px;line-height:1.5}
-#status{margin:12px 0;color:#aebbd4;font-size:13px}
+.green{color:#4ce0a0}.red{color:#ff7777}.yellow{color:#ffd36b}
+.token{font-weight:bold}
 a{color:#a99aff}
+#status{margin:12px 0;color:#aebbd4;font-size:13px}
 </style>
 </head>
 <body>
 <header>
 <h1>◈ SOLANA AI SCANNER</h1>
-<small>Token discovery • Market analysis • Paper trading</small>
+<small>New meme coins • Token discovery • Market analysis • Paper trading</small>
 </header>
 <main>
 <div class="stats">
@@ -45,88 +45,157 @@ a{color:#a99aff}
 </div>
 
 <div class="notice">
-This is a market research tool, not a profit predictor.
-Risk flags are preliminary screening signals, not proof
-that a token is safe or a scam. No real trades are executed.
+Research tool only. Risk labels are preliminary market-data warnings, not proof of safety or fraud. Always verify token mint addresses and on-chain authorities. No real trades are executed.
 </div>
 
 <div class="section">
-<h3>Token scanner</h3>
-<div class="search">
-<input id="query" value="SOL" placeholder="Token name or mint address">
-<button onclick="scan()">SCAN</button>
+<h3>New Solana token discovery</h3>
+<div class="actions">
+<button onclick="discover()">DISCOVER NEW TOKENS</button>
 </div>
-<div id="status">Ready to scan Solana markets.</div>
+<div class="actions">
+<input id="query" placeholder="Search token name or mint address">
+<button onclick="searchToken()">SEARCH</button>
+</div>
+<div id="status">Ready to discover recent Solana tokens.</div>
 <div class="tablewrap">
 <table>
 <thead><tr>
-<th>TOKEN</th><th>PRICE</th><th>LIQUIDITY</th>
-<th>24H VOLUME</th><th>24H CHANGE</th><th>RISK SCREEN</th>
+<th>TOKEN / MINT</th>
+<th>PRICE</th>
+<th>LIQUIDITY</th>
+<th>24H VOLUME</th>
+<th>24H CHANGE</th>
+<th>RISK SCREEN</th>
 </tr></thead>
 <tbody id="results">
-<tr><td colspan="6">Start your first scan.</td></tr>
+<tr><td colspan="6">Tap Discover New Tokens to begin.</td></tr>
 </tbody>
 </table>
 </div>
 </div>
 
 <div class="section card">
-<h3>Research notes</h3>
-<p>• Higher liquidity can make trading easier.</p>
-<p>• Sudden volume increases deserve investigation.</p>
-<p>• Low liquidity and extreme price movements require caution.</p>
-<p>• Always verify token authorities, holders and liquidity locks independently.</p>
+<h3>Risk screening guide</h3>
+<p>🟢 Better market signals: stronger liquidity and active trading.</p>
+<p>🟡 Caution: low liquidity or unusual volume patterns.</p>
+<p>🔴 High caution: extremely low liquidity or missing market data.</p>
+<p>Token names and symbols can be copied. Always verify the mint address.</p>
 </div>
-<p class="section"><small>Data supplied by DexScreener public market API. Results may be delayed or incomplete.</small></p>
+
+<p class="section"><small>Market data: DexScreener public API. Data can be delayed, incomplete or inaccurate. This scanner does not guarantee token safety.</small></p>
 </main>
 
 <script>
-const money = n => {
+const API='https://api.dexscreener.com';
+
+const money=n=>{
  n=Number(n)||0;
- return n>=1000000?'$'+(n/1000000).toFixed(2)+'M':
- n>=1000?'$'+(n/1000).toFixed(2)+'K':'$'+n.toFixed(4);
+ if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';
+ if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M';
+ if(n>=1000)return '$'+(n/1000).toFixed(2)+'K';
+ return '$'+n.toFixed(4);
 };
-async function scan(){
- const q=document.getElementById('query').value.trim();
+
+const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({
+'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+
+function risk(p){
+ const l=Number(p.liquidity?.usd)||0;
+ const v=Number(p.volume?.h24)||0;
+ if(l<5000)return ['HIGH CAUTION','red'];
+ if(l<20000)return ['CAUTION','yellow'];
+ if(v===0)return ['LOW ACTIVITY','yellow'];
+ if(v>l*10)return ['UNUSUAL VOLUME','yellow'];
+ return ['REVIEW','green'];
+}
+
+function render(pairs){
+ const body=document.getElementById('results');
+ const unique=new Map();
+ pairs.forEach(p=>{
+  if(p.chainId==='solana' && p.baseToken?.address){
+   const key=p.baseToken.address;
+   const old=unique.get(key);
+   if(!old || (Number(p.liquidity?.usd)||0)>(Number(old.liquidity?.usd)||0))unique.set(key,p);
+  }
+ });
+ const list=[...unique.values()].sort((a,b)=>
+  (Number(b.pairCreatedAt)||0)-(Number(a.pairCreatedAt)||0)
+ );
+ document.getElementById('count').textContent=list.length;
+ document.getElementById('last').textContent=new Date().toLocaleTimeString();
+ if(!list.length){
+  body.innerHTML='<tr><td colspan="6">No matching Solana pairs found.</td></tr>';
+  return;
+ }
+ body.innerHTML=list.slice(0,50).map(p=>{
+  const change=Number(p.priceChange?.h24)||0;
+  const [label,color]=risk(p);
+  const address=p.baseToken.address;
+  const url=safe(p.url||'#');
+  return `<tr>
+  <td><span class="token">${safe(p.baseToken.symbol||'Unknown')}</span><br>
+  ${safe(p.baseToken.name||'Unknown')}<br>
+  <small>${safe(address)}</small><br>
+  <a href="${url}" target="_blank" rel="noopener">View pair ↗</a></td>
+  <td>${money(p.priceUsd)}</td>
+  <td>${money(p.liquidity?.usd)}</td>
+  <td>${money(p.volume?.h24)}</td>
+  <td class="${change>=0?'green':'red'}">${change.toFixed(2)}%</td>
+  <td class="${color}">${label}</td>
+  </tr>`;
+ }).join('');
+}
+
+async function discover(){
  const status=document.getElementById('status');
  const body=document.getElementById('results');
- if(!q)return;
- status.textContent='Scanning public Solana market data...';
- body.innerHTML='<tr><td colspan="6">Loading...</td></tr>';
+ status.textContent='Discovering recent Solana token profiles...';
+ body.innerHTML='<tr><td colspan="6">Loading recent tokens...</td></tr>';
  try{
- const response=await fetch('https://api.dexscreener.com/latest/dex/search?q='+encodeURIComponent(q));
- if(!response.ok)throw Error('Market API unavailable');
- const data=await response.json();
- const pairs=(data.pairs||[]).filter(p=>p.chainId==='solana');
- pairs.sort((a,b)=>(Number(b.volume?.h24)||0)-(Number(a.volume?.h24)||0));
- document.getElementById('count').textContent=pairs.length;
- document.getElementById('last').textContent=new Date().toLocaleTimeString();
- if(!pairs.length){
- body.innerHTML='<tr><td colspan="6">No Solana pairs found. Try another name or mint address.</td></tr>';
- status.textContent='Scan completed.';
- return;
- }
- body.innerHTML=pairs.slice(0,30).map(p=>{
- const liq=Number(p.liquidity?.usd)||0;
- const vol=Number(p.volume?.h24)||0;
- const change=Number(p.priceChange?.h24)||0;
- let risk=liq<5000?'HIGH CAUTION':liq<20000?'CAUTION':'REVIEW';
- const cls=change>=0?'green':'red';
- return `<tr>
- <td><span class="token">${p.baseToken?.symbol||'Unknown'}</span><br><small>${p.baseToken?.name||''}</small><br><small>${(p.baseToken?.address||'').slice(0,8)}...</small><br><a href="${p.url}" target="_blank" rel="noopener">View pair ↗</a></td>
- <td>${money(p.priceUsd)}</td>
- <td>${money(liq)}</td>
- <td>${money(vol)}</td>
- <td class="${cls}">${change.toFixed(2)}%</td>
- <td>${risk}</td></tr>`;
- }).join('');
- status.textContent='Scan completed. '+pairs.length+' Solana pairs found.';
+  const r=await fetch(API+'/token-profiles/latest/v1');
+  if(!r.ok)throw Error('Token discovery API unavailable');
+  const profiles=await r.json();
+  const tokens=[...new Set((profiles||[])
+   .filter(x=>x.chainId==='solana')
+   .map(x=>x.tokenAddress)
+   .filter(Boolean))].slice(0,20);
+  if(!tokens.length)throw Error('No recent Solana profiles returned');
+  status.textContent='Found '+tokens.length+' recent profiles. Loading market pairs...';
+  const results=await Promise.allSettled(tokens.map(async address=>{
+   const r=await fetch(API+'/token-pairs/v1/solana/'+encodeURIComponent(address));
+   if(!r.ok)return [];
+   return await r.json();
+  }));
+  const pairs=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
+  render(pairs);
+  status.textContent='Discovery complete. '+pairs.length+' market pairs retrieved from recent profiles.';
  }catch(e){
- body.innerHTML='<tr><td colspan="6">Could not load market data. Check your internet connection and try again.</td></tr>';
- status.textContent='Scan failed: '+e.message;
+  body.innerHTML='<tr><td colspan="6">Could not complete discovery. Try again shortly.</td></tr>';
+  status.textContent='Discovery error: '+e.message;
  }
 }
-scan();
+
+async function searchToken(){
+ const q=document.getElementById('query').value.trim();
+ if(!q)return;
+ const status=document.getElementById('status');
+ status.textContent='Searching DexScreener...';
+ try{
+  const r=await fetch(API+'/latest/dex/search?q='+encodeURIComponent(q));
+  if(!r.ok)throw Error('Search unavailable');
+  const data=await r.json();
+  const pairs=(data.pairs||[]).filter(p=>p.chainId==='solana');
+  render(pairs);
+  status.textContent='Search completed. '+pairs.length+' Solana pairs found.';
+ }catch(e){
+  status.textContent='Search failed: '+e.message;
+ }
+}
+
+discover();
 </script>
 </body>
 </html>
