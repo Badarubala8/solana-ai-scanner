@@ -54,12 +54,6 @@
 <div class="actions"><a class="pill" href="https://dexscreener.com/solana" target="_blank" rel="noopener">OPEN DEXSCREENER DASHBOARD ↗</a><a class="pill" href="https://swap.pump.fun/" target="_blank" rel="noopener">OPEN OFFICIAL PUMPSWAP ↗</a><a class="pill" href="https://solana.pump.fun/explore" target="_blank" rel="noopener">PUMP NEW COINS ↗</a></div>
 <div class="notice">Live market data is fetched from the public DEX Screener API and filtered to Solana pools with DEX ID “pumpswap”. Use the links above to compare the scanner with the DEX Screener dashboard or open PumpSwap. This dashboard does not connect a wallet or execute trades.</div>
 <div class="section card">
-<h3>🚀 Pump.fun NEW TOKEN EARLY WATCHLIST</h3>
-<p class="tiny muted">Live newly-created Pump.fun tokens from PumpPortal. These may not have migrated to PumpSwap yet, so they are shown separately from the PumpSwap market scanner. The score is only a rough data-completeness/activity heuristic—not a prediction or promise of 10x/100x profit.</p>
-<div class="actions"><span id="newTokenStatus" class="pill yellow">Connecting to Pump.fun feed…</span><button class="secondary" onclick="clearNewTokens()">CLEAR WATCHLIST</button></div>
-<div id="newTokenList" class="tiny"><span class="muted">Waiting for new Pump.fun token events…</span></div>
-</div>
-<div class="section card">
 <h3>🎯 EARLY LOW-CAP RADAR</h3>
 <p class="tiny muted">Targets PumpSwap tokens with estimated market cap between your selected limits. Market cap is approximate (DEX Screener FDV/marketCap when available); it is not proof a token can reach millions. Lower caps are extremely risky.</p>
 <div class="actions">
@@ -173,44 +167,6 @@ async function handleLiveMigration(message){
   status.textContent='LIVE: new PumpSwap pool detected and added. Auto-refresh runs every 20 seconds.';
  }
 }
-// Pump.fun new-token watchlist. This does not predict returns or execute trades.
-let newPumpTokens=[], newPumpSeen=new Set();
-function pumpTokenScore(t){
- let score=0;
- const name=String(t.name||'').trim(), symbol=String(t.symbol||'').trim();
- if(name.length>=3)score+=10;
- if(symbol.length>=2)score+=10;
- if(t.uri)score+=10;
- if(t.twitter||t.telegram||t.website)score+=15;
- const sol=Number(t.vSolInBondingCurve)||0;
- if(sol>=30)score+=20;else if(sol>=10)score+=12;else if(sol>0)score+=5;
- const mc=Number(t.marketCapSol)||0;
- if(mc>0&&mc<500)score+=10;
- if(mc>=500)score+=3;
- return Math.min(100,score);
-}
-function renderNewPumpTokens(){
- const el=document.getElementById('newTokenList');
- if(!newPumpTokens.length){el.innerHTML='<span class="muted">No new-token events received yet. Keep this page open; feed availability may vary.</span>';return}
- el.innerHTML=newPumpTokens.slice(0,30).map(t=>{
-  const score=pumpTokenScore(t),mint=String(t.mint||'');
-  const sol=Number(t.vSolInBondingCurve)||0,mc=Number(t.marketCapSol)||0;
-  const links='<a target="_blank" rel="noopener" href="https://pump.fun/coin/'+encodeURIComponent(mint)+'">Open Pump.fun ↗</a> &nbsp; <a target="_blank" rel="noopener" href="https://dexscreener.com/solana/'+encodeURIComponent(mint)+'">Check DEX Screener ↗</a>';
-  return '<div class="position"><b>'+safe(t.symbol||'NEW TOKEN')+'</b> — '+safe(t.name||'Unnamed')+' <span class="pill">'+score+'/100 data signals</span><br><small>Mint: '+safe(mint)+'</small><br>Bonding-curve SOL: '+(sol?sol.toFixed(2)+' SOL':'unknown')+' · Market cap: '+(mc?mc.toFixed(2)+' SOL':'unknown')+'<br>'+links+'<br><span class="muted">Signals are incomplete; verify holders, liquidity, mint/freeze authority and sellability before risking money.</span></div>';
- }).join('');
-}
-function handleNewPumpToken(t){
- if(!t||!t.mint||newPumpSeen.has(t.mint))return;
- newPumpSeen.add(t.mint);
- newPumpTokens.unshift({...t,receivedAt:Date.now()});
- newPumpTokens=newPumpTokens.slice(0,50);
- if(newPumpSeen.size>2000)newPumpSeen=new Set(newPumpTokens.map(x=>x.mint));
- renderNewPumpTokens();
- const status=document.getElementById('newTokenStatus');
- status.textContent='Pump.fun live events received · '+newPumpTokens.length+' recent tokens';
- status.className='pill green';
-}
-function clearNewTokens(){newPumpTokens=[];newPumpSeen.clear();renderNewPumpTokens();document.getElementById('newTokenStatus').textContent='Watchlist cleared — waiting for new tokens';document.getElementById('newTokenStatus').className='pill yellow'}
 function connectLiveFeed(){
  try{
   if(liveSocket && (liveSocket.readyState===WebSocket.OPEN||liveSocket.readyState===WebSocket.CONNECTING))return;
@@ -219,12 +175,9 @@ function connectLiveFeed(){
    document.getElementById('liveStatus').textContent='Live feed connected';
    document.getElementById('liveStatus').className='pill green';
    liveSocket.send(JSON.stringify({method:'subscribeMigration'}));
-   liveSocket.send(JSON.stringify({method:'subscribeNewToken'}));
-   document.getElementById('newTokenStatus').textContent='Pump.fun new-token feed connected';
-   document.getElementById('newTokenStatus').className='pill green';
   };
   liveSocket.onmessage=async event=>{
-   try{const msg=JSON.parse(event.data);if(Array.isArray(msg)){for(const item of msg){if(item?.txType==='create'||item?.mint&&item?.name)handleNewPumpToken(item);await handleLiveMigration(item)}}else{if(msg?.txType==='create'||msg?.mint&&msg?.name)handleNewPumpToken(msg);await handleLiveMigration(msg)}}catch(e){}
+   try{const msg=JSON.parse(event.data);if(Array.isArray(msg)){for(const item of msg)await handleLiveMigration(item)}else{await handleLiveMigration(msg)}}catch(e){}
   };
   liveSocket.onerror=()=>{document.getElementById('liveStatus').textContent='Live feed reconnecting';document.getElementById('liveStatus').className='pill yellow'};
   liveSocket.onclose=()=>{
