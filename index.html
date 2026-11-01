@@ -55,7 +55,7 @@
 <div class="notice">Live market data is fetched from the public DEX Screener API and filtered to Solana pools with DEX ID “pumpswap”. Use the links above to compare the scanner with the DEX Screener dashboard or open PumpSwap. This dashboard does not connect a wallet or execute trades.</div>
 <div class="section">
 <h3>Discover PumpSwap tokens on Solana</h3>
-<div class="actions"><button onclick="discover()">DISCOVER RECENT PUMPSWAP TOKENS</button><button class="secondary" onclick="loadTrending()">REFRESH PUMPSWAP MARKET</button><button class="secondary" id="filterToggle" onclick="toggleRejected()">SHOW REJECTED TOKENS</button></div>
+<div class="actions"><span id="liveStatus" class="pill yellow">Connecting live feed…</span><button onclick="discover()">DISCOVER RECENT PUMPSWAP TOKENS</button><button class="secondary" onclick="loadTrending()">REFRESH PUMPSWAP MARKET</button><button class="secondary" id="filterToggle" onclick="toggleRejected()">SHOW REJECTED TOKENS</button></div>
 <div class="actions"><input id="query" placeholder="Search PumpSwap token name, symbol, or mint address"><button onclick="searchToken()">SEARCH</button></div>
 <div id="status" class="muted">Loading recent Solana tokens…</div>
 <div class="tablewrap"><table><thead><tr><th>TOKEN / MINT</th><th>PRICE</th><th>LIQUIDITY</th><th>24H VOLUME</th><th>24H CHANGE</th><th>NARRATIVE</th><th>SCORE / RISK</th><th>ACTION</th></tr></thead><tbody id="results"><tr><td colspan="8">Loading…</td></tr></tbody></table></div>
@@ -76,7 +76,7 @@
 </div>
 <div id="positions" class="tiny">No open paper positions. Tap Paper buy on a token to simulate a trade.</div>
 </div>
-<div class="section foot">Market pairs: PumpSwap on Solana, filtered from DexScreener public API. Holder/security checks may use the public RugCheck report endpoint and can fail or be rate-limited. This page does not custody funds, connect a wallet, or execute real trades. Never enter a seed phrase or private key.</div>
+<div class="section foot">Market pairs: PumpSwap on Solana, filtered from DexScreener public API. A public PumpPortal migration WebSocket is used for live migration events, with a 20-second market refresh fallback; live events may be delayed or unavailable. Holder/security checks may use the public RugCheck report endpoint and can fail or be rate-limited. This page does not custody funds, connect a wallet, or execute real trades. Never enter a seed phrase or private key.</div>
 </main>
 <script>
 const API='https://api.dexscreener.com';
@@ -107,14 +107,63 @@ function paperBuy(mint){const p=pairsByMint.get(mint);if(!p)return;const price=N
 function paperSell(mint){const pos=paper.positions[mint],p=pairsByMint.get(mint);if(!pos||!p)return;const price=Number(p.priceUsd)||0;if(price<=0){alert('Current price unavailable; cannot calculate paper sale.');return}const proceeds=pos.qty*price;paper.cash+=proceeds;paper.realized+=proceeds-pos.cost;delete paper.positions[mint];savePaper()}
 function updatePaper(){let value=paper.cash,unreal=0;const positions=Object.values(paper.positions);positions.forEach(pos=>{const p=pairsByMint.get(pos.mint),price=Number(p?.priceUsd)||0;value+=pos.qty*price;unreal+=pos.qty*price-pos.cost});document.getElementById('cashValue').textContent=money(paper.cash);document.getElementById('portfolioValue').textContent=money(value);document.getElementById('positionCount').textContent=positions.length;const u=document.getElementById('unrealized');u.textContent=money(unreal);u.className='value '+(unreal>=0?'green':'red');const rr=document.getElementById('realized');rr.textContent=money(paper.realized);rr.className='value '+(paper.realized>=0?'green':'red');const el=document.getElementById('positions');if(!positions.length){el.textContent='No open paper positions. Tap Paper buy on a token to simulate a trade.';return}el.innerHTML=positions.map(pos=>{const p=pairsByMint.get(pos.mint),price=Number(p?.priceUsd)||0,val=pos.qty*price,pl=val-pos.cost;return '<div class="position"><b>'+safe(pos.symbol)+'</b> — '+safe(pos.name)+'<br>Cost: '+money(pos.cost)+' · Current value: '+money(val)+' · P/L: <span class="'+(pl>=0?'green':'red')+'">'+money(pl)+'</span><br><small>'+safe(pos.mint)+'</small><br><button class="secondary" onclick="paperSell(\''+safe(pos.mint)+'\')">Sell position (paper)</button></div>'}).join('')}
 function resetPaper(){if(!confirm('Reset simulated cash, positions, and P/L to $1,000? This cannot be undone.'))return;paper={cash:1000,realized:0,positions:{}};savePaper()}
-// Start with PumpSwap-only market search. Recent token-profile discovery is a PumpSwap-only fallback.
+// Live discovery: PumpPortal migration events + DexScreener market snapshots.
+let liveSocket=null, liveReconnectTimer=null, liveSeenMints=new Set(), refreshBusy=false;
+async function fetchMintPairs(mint){
+ try{
+  const r=await fetchWithTimeout(API+'/token-pairs/v1/solana/'+encodeURIComponent(mint));
+  if(!r.ok)return [];
+  const d=await r.json();
+  return (Array.isArray(d)?d:[]).filter(isPumpSwapSolanaPair);
+ }catch(e){return []}
+}
+async function handleLiveMigration(message){
+ const mint=message?.mint||message?.tokenAddress||message?.token?.mint||message?.data?.mint;
+ if(!mint||liveSeenMints.has(mint))return;
+ liveSeenMints.add(mint);
+ if(liveSeenMints.size>1500)liveSeenMints=new Set([...liveSeenMints].slice(-750));
+ const status=document.getElementById('status');
+ status.textContent='Live migration detected. Checking for its PumpSwap pool…';
+ const found=await fetchMintPairs(mint);
+ if(found.length){
+  render([...found,...lastPairs]);
+  status.textContent='LIVE: new PumpSwap pool detected and added. Auto-refresh runs every 20 seconds.';
+ }
+}
+function connectLiveFeed(){
+ try{
+  if(liveSocket && (liveSocket.readyState===WebSocket.OPEN||liveSocket.readyState===WebSocket.CONNECTING))return;
+  liveSocket=new WebSocket('wss://pumpportal.fun/api/data');
+  liveSocket.onopen=()=>{
+   document.getElementById('liveStatus').textContent='Live feed connected';
+   document.getElementById('liveStatus').className='pill green';
+   liveSocket.send(JSON.stringify({method:'subscribeMigration'}));
+  };
+  liveSocket.onmessage=async event=>{
+   try{const msg=JSON.parse(event.data);if(Array.isArray(msg)){for(const item of msg)await handleLiveMigration(item)}else await handleLiveMigration(msg)}catch(e){}
+  };
+  liveSocket.onerror=()=>{document.getElementById('liveStatus').textContent='Live feed reconnecting';document.getElementById('liveStatus').className='pill yellow'};
+  liveSocket.onclose=()=>{
+   document.getElementById('liveStatus').textContent='Live feed offline — retrying';
+   document.getElementById('liveStatus').className='pill yellow';
+   clearTimeout(liveReconnectTimer);liveReconnectTimer=setTimeout(connectLiveFeed,5000);
+  };
+ }catch(e){document.getElementById('liveStatus').textContent='Live feed unavailable';}
+}
+async function refreshAll(){
+ if(refreshBusy)return;refreshBusy=true;
+ try{
+  await loadTrending();
+  if(!lastPairs.length)await discover();
+ }finally{refreshBusy=false}
+}
 (async function startDashboard(){
  const status=document.getElementById('status');
  status.textContent='Loading Solana market data…';
  document.getElementById('results').innerHTML='<tr><td colspan="8">Connecting to market data…</td></tr>';
- await loadTrending();
- if(!lastPairs.length){status.textContent='Market search did not return data. Trying recent token discovery…';await discover();}
- if(!lastPairs.length){status.textContent='Market data is unavailable right now. Check your connection and tap REFRESH MARKET SEARCH to retry.';document.getElementById('results').innerHTML='<tr><td colspan="8">Unable to load market data. Please retry in a moment.</td></tr>';}
+ connectLiveFeed();
+ await refreshAll();
+ setInterval(refreshAll,20000);
 })();
 </script>
 </body>
