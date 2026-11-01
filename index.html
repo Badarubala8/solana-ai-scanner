@@ -100,7 +100,15 @@ function paperBuy(mint){const p=pairsByMint.get(mint);if(!p)return;const price=N
 function paperSell(mint){const pos=paper.positions[mint],p=pairsByMint.get(mint);if(!pos||!p)return;const price=Number(p.priceUsd)||0;if(price<=0){alert('Current price unavailable; cannot calculate paper sale.');return}const proceeds=pos.qty*price;paper.cash+=proceeds;paper.realized+=proceeds-pos.cost;delete paper.positions[mint];savePaper()}
 function updatePaper(){let value=paper.cash,unreal=0;const positions=Object.values(paper.positions);positions.forEach(pos=>{const p=pairsByMint.get(pos.mint),price=Number(p?.priceUsd)||0;value+=pos.qty*price;unreal+=pos.qty*price-pos.cost});document.getElementById('cashValue').textContent=money(paper.cash);document.getElementById('portfolioValue').textContent=money(value);document.getElementById('positionCount').textContent=positions.length;const u=document.getElementById('unrealized');u.textContent=money(unreal);u.className='value '+(unreal>=0?'green':'red');const rr=document.getElementById('realized');rr.textContent=money(paper.realized);rr.className='value '+(paper.realized>=0?'green':'red');const el=document.getElementById('positions');if(!positions.length){el.textContent='No open paper positions. Tap Paper buy on a token to simulate a trade.';return}el.innerHTML=positions.map(pos=>{const p=pairsByMint.get(pos.mint),price=Number(p?.priceUsd)||0,val=pos.qty*price,pl=val-pos.cost;return '<div class="position"><b>'+safe(pos.symbol)+'</b> — '+safe(pos.name)+'<br>Cost: '+money(pos.cost)+' · Current value: '+money(val)+' · P/L: <span class="'+(pl>=0?'green':'red')+'">'+money(pl)+'</span><br><small>'+safe(pos.mint)+'</small><br><button class="secondary" onclick="paperSell(\''+safe(pos.mint)+'\')">Sell position (paper)</button></div>'}).join('')}
 function resetPaper(){if(!confirm('Reset simulated cash, positions, and P/L to $1,000? This cannot be undone.'))return;paper={cash:1000,realized:0,positions:{}};savePaper()}
-discover();
+// Start with broad market search for a fast first render. Recent-profile discovery runs as a fallback.
+(async function startDashboard(){
+ const status=document.getElementById('status');
+ status.textContent='Loading Solana market data…';
+ document.getElementById('results').innerHTML='<tr><td colspan="8">Connecting to market data…</td></tr>';
+ await loadTrending();
+ if(!lastPairs.length){status.textContent='Market search did not return data. Trying recent token discovery…';await discover();}
+ if(!lastPairs.length){status.textContent='Market data is unavailable right now. Check your connection and tap REFRESH MARKET SEARCH to retry.';document.getElementById('results').innerHTML='<tr><td colspan="8">Unable to load market data. Please retry in a moment.</td></tr>';}
+})();
 </script>
 </body>
 </html>
