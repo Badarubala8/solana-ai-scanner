@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,195 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Solana AI Scanner</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#0b1020;color:#edf2ff;font-family:Arial,sans-serif}
-header{padding:22px;background:#121a30;border-bottom:1px solid #28344e}
-h1{margin:0;color:#a18cff;font-size:23px}
-small{color:#9eabc4}
-main{max-width:1100px;margin:auto;padding:16px}
-.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
-.card{background:#151f36;padding:15px;border:1px solid #293653;border-radius:12px}
-.value{font-size:21px;font-weight:bold;margin-top:8px}
-button,input{padding:13px;border-radius:9px;border:1px solid #34415e;font-size:14px}
-button{background:#8269ff;color:white;border:0;font-weight:bold;cursor:pointer}
-input{background:#111a2d;color:white;min-width:0;flex:1}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
-.notice{background:#28233f;padding:13px;border-radius:10px;color:#c9c0ff;font-size:13px;line-height:1.5}
-.tablewrap{overflow-x:auto;background:#151f36;border-radius:12px}
-table{width:100%;border-collapse:collapse;min-width:760px}
-th,td{text-align:left;padding:12px;border-bottom:1px solid #293653;font-size:13px}
-th{color:#9eabc4}
-.section{margin-top:24px}
-.green{color:#4ce0a0}.red{color:#ff7777}.yellow{color:#ffd36b}
-.token{font-weight:bold}
-a{color:#a99aff}
-#status{margin:12px 0;color:#aebbd4;font-size:13px}
+*{box-sizing:border-box}body{margin:0;background:#0b1020;color:#edf2ff;font-family:Arial,sans-serif}header{padding:20px;background:#121a30;border-bottom:1px solid #28344e}h1{margin:0;color:#a18cff;font-size:23px}small,.muted{color:#9eabc4}main{max-width:1200px;margin:auto;padding:16px}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.card{background:#151f36;padding:15px;border:1px solid #293653;border-radius:12px;min-width:0}.value{font-size:21px;font-weight:bold;margin-top:8px}button,input,select{padding:12px;border-radius:9px;border:1px solid #34415e;font-size:14px}button{background:#8269ff;color:white;border:0;font-weight:bold;cursor:pointer}button.secondary{background:#283653}button:disabled{opacity:.5}input,select{background:#111a2d;color:white;min-width:0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.actions input{flex:1}.notice{background:#28233f;padding:13px;border-radius:10px;color:#c9c0ff;font-size:13px;line-height:1.5}.section{margin-top:24px}.green{color:#4ce0a0}.red{color:#ff7777}.yellow{color:#ffd36b}.tablewrap{overflow-x:auto;background:#151f36;border-radius:12px}table{width:100%;border-collapse:collapse;min-width:940px}th,td{text-align:left;padding:12px;border-bottom:1px solid #293653;font-size:13px;vertical-align:top}th{color:#9eabc4}.token{font-weight:bold}a{color:#a99aff} .pill{display:inline-block;padding:5px 8px;border-radius:20px;background:#25314b;font-size:12px;margin:3px 3px 3px 0}.grid2{display:grid;grid-template-columns:1fr;gap:12px}.tiny{font-size:12px;line-height:1.5}.position{border-top:1px solid #293653;padding:10px 0}.score{font-weight:bold}.foot{font-size:12px;line-height:1.5;color:#9eabc4}@media(min-width:700px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.grid2{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
-<header>
-<h1>◈ SOLANA AI SCANNER</h1>
-<small>New meme coins • Token discovery • Market analysis • Paper trading</small>
-</header>
+<header><h1>◈ SOLANA AI SCANNER</h1><small>Token discovery • narrative signals • holder risk • paper trading</small></header>
 <main>
 <div class="stats">
 <div class="card"><small>NETWORK</small><div class="value">SOLANA</div></div>
-<div class="card"><small>MODE</small><div class="value green">WATCH ONLY</div></div>
+<div class="card"><small>MODE</small><div class="value green">WATCH + PAPER</div></div>
 <div class="card"><small>TOKENS FOUND</small><div class="value" id="count">0</div></div>
-<div class="card"><small>LAST SCAN</small><div class="value" id="last">Not started</div></div>
+<div class="card"><small>PAPER PORTFOLIO</small><div class="value" id="portfolioValue">$1,000.00</div></div>
 </div>
-
-<div class="notice">
-Research tool only. Risk labels are preliminary market-data warnings, not proof of safety or fraud. Always verify token mint addresses and on-chain authorities. No real trades are executed.
-</div>
-
+<div class="notice">Research tool only. Scores are rule-based estimates, not guaranteed AI predictions. Market data may be delayed or incomplete. Holder and security data may be unavailable for some tokens. No real trades are executed; paper-trading records stay in this browser.</div>
 <div class="section">
-<h3>New Solana token discovery</h3>
-<div class="actions">
-<button onclick="discover()">DISCOVER NEW TOKENS</button>
+<h3>Discover Solana tokens</h3>
+<div class="actions"><button onclick="discover()">DISCOVER RECENT TOKENS</button><button class="secondary" onclick="loadTrending()">REFRESH MARKET SEARCH</button></div>
+<div class="actions"><input id="query" placeholder="Search token name, symbol, or mint address"><button onclick="searchToken()">SEARCH</button></div>
+<div id="status" class="muted">Loading recent Solana tokens…</div>
+<div class="tablewrap"><table><thead><tr><th>TOKEN / MINT</th><th>PRICE</th><th>LIQUIDITY</th><th>24H VOLUME</th><th>24H CHANGE</th><th>NARRATIVE</th><th>SCORE / RISK</th><th>ACTION</th></tr></thead><tbody id="results"><tr><td colspan="8">Loading…</td></tr></tbody></table></div>
+<p class="tiny muted">Score is a simple screening score based on available liquidity, volume, momentum and basic market signals. It is not an investment recommendation.</p>
 </div>
-<div class="actions">
-<input id="query" placeholder="Search token name or mint address">
-<button onclick="searchToken()">SEARCH</button>
+<div class="section grid2">
+<div class="card"><h3>🐋 Holder & security check</h3><p class="tiny muted">Select a token using “Analyze holders” in the table. The scanner will attempt to retrieve a public RugCheck report. If holder data cannot be retrieved, it will say UNKNOWN rather than assume the token is safe.</p><div id="holderResult" class="tiny">No token analyzed yet.</div></div>
+<div class="card"><h3>🔥 Narrative monitor</h3><p class="tiny muted">Narratives are estimated from token names/symbols and market activity. This is a heuristic, not a definitive live sector ranking.</p><div id="narratives"><span class="pill">Waiting for scan…</span></div></div>
 </div>
-<div id="status">Ready to discover recent Solana tokens.</div>
-<div class="tablewrap">
-<table>
-<thead><tr>
-<th>TOKEN / MINT</th>
-<th>PRICE</th>
-<th>LIQUIDITY</th>
-<th>24H VOLUME</th>
-<th>24H CHANGE</th>
-<th>RISK SCREEN</th>
-</tr></thead>
-<tbody id="results">
-<tr><td colspan="6">Tap Discover New Tokens to begin.</td></tr>
-</tbody>
-</table>
-</div>
-</div>
-
 <div class="section card">
-<h3>Risk screening guide</h3>
-<p>🟢 Better market signals: stronger liquidity and active trading.</p>
-<p>🟡 Caution: low liquidity or unusual volume patterns.</p>
-<p>🔴 High caution: extremely low liquidity or missing market data.</p>
-<p>Token names and symbols can be copied. Always verify the mint address.</p>
+<h3>📈 Paper trading</h3>
+<div class="actions"><input id="paperAmount" type="number" min="1" step="1" value="25" aria-label="Paper trade amount in dollars"><span class="muted" style="align-self:center">USD per simulated buy</span><button class="secondary" onclick="resetPaper()">RESET PAPER ACCOUNT</button></div>
+<div class="stats">
+<div><small>STARTING BALANCE</small><div class="value" id="cashValue">$1,000.00</div></div>
+<div><small>OPEN POSITIONS</small><div class="value" id="positionCount">0</div></div>
+<div><small>UNREALIZED P/L</small><div class="value" id="unrealized">$0.00</div></div>
+<div><small>REALIZED P/L</small><div class="value" id="realized">$0.00</div></div>
 </div>
-
-<p class="section"><small>Market data: DexScreener public API. Data can be delayed, incomplete or inaccurate. This scanner does not guarantee token safety.</small></p>
+<div id="positions" class="tiny">No open paper positions. Tap Paper buy on a token to simulate a trade.</div>
+</div>
+<div class="section foot">Data source: DexScreener public API. Holder/security checks may use the public RugCheck report endpoint and can fail or be rate-limited. This page does not custody funds, connect a wallet, or execute real trades. Never enter a seed phrase or private key.</div>
 </main>
-
 <script>
 const API='https://api.dexscreener.com';
-
-const money=n=>{
- n=Number(n)||0;
- if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';
- if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M';
- if(n>=1000)return '$'+(n/1000).toFixed(2)+'K';
- return '$'+n.toFixed(4);
-};
-
-const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({
-'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-}[c]));
-
-function risk(p){
- const l=Number(p.liquidity?.usd)||0;
- const v=Number(p.volume?.h24)||0;
- if(l<5000)return ['HIGH CAUTION','red'];
- if(l<20000)return ['CAUTION','yellow'];
- if(v===0)return ['LOW ACTIVITY','yellow'];
- if(v>l*10)return ['UNUSUAL VOLUME','yellow'];
- return ['REVIEW','green'];
-}
-
-function render(pairs){
- const body=document.getElementById('results');
- const unique=new Map();
- pairs.forEach(p=>{
-  if(p.chainId==='solana' && p.baseToken?.address){
-   const key=p.baseToken.address;
-   const old=unique.get(key);
-   if(!old || (Number(p.liquidity?.usd)||0)>(Number(old.liquidity?.usd)||0))unique.set(key,p);
-  }
- });
- const list=[...unique.values()].sort((a,b)=>
-  (Number(b.pairCreatedAt)||0)-(Number(a.pairCreatedAt)||0)
- );
- document.getElementById('count').textContent=list.length;
- document.getElementById('last').textContent=new Date().toLocaleTimeString();
- if(!list.length){
-  body.innerHTML='<tr><td colspan="6">No matching Solana pairs found.</td></tr>';
-  return;
- }
- body.innerHTML=list.slice(0,50).map(p=>{
-  const change=Number(p.priceChange?.h24)||0;
-  const [label,color]=risk(p);
-  const address=p.baseToken.address;
-  const url=safe(p.url||'#');
-  return `<tr>
-  <td><span class="token">${safe(p.baseToken.symbol||'Unknown')}</span><br>
-  ${safe(p.baseToken.name||'Unknown')}<br>
-  <small>${safe(address)}</small><br>
-  <a href="${url}" target="_blank" rel="noopener">View pair ↗</a></td>
-  <td>${money(p.priceUsd)}</td>
-  <td>${money(p.liquidity?.usd)}</td>
-  <td>${money(p.volume?.h24)}</td>
-  <td class="${change>=0?'green':'red'}">${change.toFixed(2)}%</td>
-  <td class="${color}">${label}</td>
-  </tr>`;
- }).join('');
-}
-
-async function discover(){
- const status=document.getElementById('status');
- const body=document.getElementById('results');
- status.textContent='Discovering recent Solana token profiles...';
- body.innerHTML='<tr><td colspan="6">Loading recent tokens...</td></tr>';
- try{
-  const r=await fetch(API+'/token-profiles/latest/v1');
-  if(!r.ok)throw Error('Token discovery API unavailable');
-  const profiles=await r.json();
-  const tokens=[...new Set((profiles||[])
-   .filter(x=>x.chainId==='solana')
-   .map(x=>x.tokenAddress)
-   .filter(Boolean))].slice(0,20);
-  if(!tokens.length)throw Error('No recent Solana profiles returned');
-  status.textContent='Found '+tokens.length+' recent profiles. Loading market pairs...';
-  const results=await Promise.allSettled(tokens.map(async address=>{
-   const r=await fetch(API+'/token-pairs/v1/solana/'+encodeURIComponent(address));
-   if(!r.ok)return [];
-   return await r.json();
-  }));
-  const pairs=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);
-  render(pairs);
-  status.textContent='Discovery complete. '+pairs.length+' market pairs retrieved from recent profiles.';
- }catch(e){
-  body.innerHTML='<tr><td colspan="6">Could not complete discovery. Try again shortly.</td></tr>';
-  status.textContent='Discovery error: '+e.message;
- }
-}
-
-async function searchToken(){
- const q=document.getElementById('query').value.trim();
- if(!q)return;
- const status=document.getElementById('status');
- status.textContent='Searching DexScreener...';
- try{
-  const r=await fetch(API+'/latest/dex/search?q='+encodeURIComponent(q));
-  if(!r.ok)throw Error('Search unavailable');
-  const data=await r.json();
-  const pairs=(data.pairs||[]).filter(p=>p.chainId==='solana');
-  render(pairs);
-  status.textContent='Search completed. '+pairs.length+' Solana pairs found.';
- }catch(e){
-  status.textContent='Search failed: '+e.message;
- }
-}
-
+let pairsByMint=new Map();
+let paper=loadPaper();
+function loadPaper(){try{return JSON.parse(localStorage.getItem('solanaScannerPaperV1'))||{cash:1000,realized:0,positions:{}}}catch(e){return {cash:1000,realized:0,positions:{}}}}
+function savePaper(){localStorage.setItem('solanaScannerPaperV1',JSON.stringify(paper));updatePaper()}
+const money=n=>{n=Number(n)||0;if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M';if(n>=1000)return '$'+(n/1000).toFixed(2)+'K';if(n>0&&n<0.0001)return '$'+n.toFixed(10).replace(/0+$/,'').replace(/\.$/,'');return '$'+n.toLocaleString('en-US',{minimumFractionDigits:Math.min(4,Math.max(2,decimalPlaces(n))),maximumFractionDigits:10})};
+function decimalPlaces(n){if(!n||n>=1)return 2;return Math.min(10,Math.max(4,Math.ceil(-Math.log10(n))+2))}
+const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function narrative(p){const s=((p.baseToken?.name||'')+' '+(p.baseToken?.symbol||'')).toLowerCase();if(/ai|agent|neural|gpt|bot/.test(s))return 'AI / Agents';if(/dog|cat|inu|shib|frog|pepe|bonk|wif|goat|bear|ape/.test(s))return 'Animal / Meme';if(/trump|politic|president|election/.test(s))return 'Politics / Culture';if(/defi|swap|lend|yield|finance|vault/.test(s))return 'DeFi / Finance';if(/game|gaming|play|metaverse/.test(s))return 'Gaming';if(/depin|compute|cloud|data|wifi|network/.test(s))return 'DePIN / Infrastructure';return 'Other / Unclassified'}
+function assess(p){const l=Number(p.liquidity?.usd)||0,v=Number(p.volume?.h24)||0,c=Number(p.priceChange?.h24)||0;let score=0; if(l>=100000)score+=30;else if(l>=25000)score+=22;else if(l>=10000)score+=12;else if(l>=5000)score+=5;if(v>=100000)score+=25;else if(v>=25000)score+=18;else if(v>=5000)score+=10;else if(v>0)score+=4;if(c>0&&c<30)score+=15;else if(c>=30&&c<100)score+=8;else if(c<0&&c>-15)score+=5;if(v>0&&l>0&&v/l<8)score+=10;if(p.pairCreatedAt&&Date.now()-p.pairCreatedAt<86400000)score+=10;if(l<5000)return {score:Math.min(score,35),label:'HIGH CAUTION'};if(v>l*10&&l>0)return {score:Math.min(score,55),label:'UNUSUAL VOLUME'};if(l<20000)return {score:Math.min(score,60),label:'CAUTION'};return {score:Math.min(score,100),label:score>=65?'STRONGER SIGNALS':'REVIEW'};}
+function uniquePairs(arr){const m=new Map();(arr||[]).forEach(p=>{if(p.chainId==='solana'&&p.baseToken?.address){const k=p.baseToken.address,old=m.get(k);if(!old||(Number(p.liquidity?.usd)||0)>(Number(old.liquidity?.usd)||0))m.set(k,p)}});return [...m.values()].sort((a,b)=>(Number(b.pairCreatedAt)||0)-(Number(a.pairCreatedAt)||0))}
+function render(arr){const list=uniquePairs(arr);pairsByMint=new Map(list.map(p=>[p.baseToken.address,p]));document.getElementById('count').textContent=list.length;const body=document.getElementById('results');if(!list.length){body.innerHTML='<tr><td colspan="8">No Solana market pairs found. Try again or search a mint address.</td></tr>';updateNarratives([]);return}
+body.innerHTML=list.slice(0,50).map(p=>{const a=p.baseToken.address,c=Number(p.priceChange?.h24)||0,r=assess(p),n=narrative(p);return '<tr><td><b>'+safe(p.baseToken.symbol||'Unknown')+'</b><br>'+safe(p.baseToken.name||'Unknown')+'<br><small>'+safe(a)+'</small><br><a href="'+safe(p.url||'#')+'" target="_blank" rel="noopener">View pair ↗</a></td><td>'+money(p.priceUsd)+'</td><td>'+money(p.liquidity?.usd)+'</td><td>'+money(p.volume?.h24)+'</td><td class="'+(c>=0?'green':'red')+'">'+c.toFixed(2)+'%</td><td><span class="pill">'+safe(n)+'</span></td><td><span class="score">'+r.score+'/100</span><br><span class="'+(r.label==='STRONGER SIGNALS'?'green':r.label==='REVIEW'?'yellow':'red')+'">'+r.label+'</span></td><td><button onclick="paperBuy(\''+safe(a)+'\')">Paper buy</button><br><br><button class="secondary" onclick="analyzeHolders(\''+safe(a)+'\')">Analyze holders</button></td></tr>'}).join('');updateNarratives(list);updatePaper()}
+function updateNarratives(list){const counts={};list.forEach(p=>{const n=narrative(p);counts[n]=(counts[n]||0)+1});const el=document.getElementById('narratives');const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);el.innerHTML=entries.length?entries.map(([k,v])=>'<span class="pill">'+safe(k)+': '+v+'</span>').join(''):'No narrative data yet.'}
+async function discover(){const status=document.getElementById('status');status.textContent='Finding recent Solana token profiles…';try{const r=await fetch(API+'/token-profiles/latest/v1');if(!r.ok)throw Error('Token profiles API returned '+r.status);const profiles=await r.json();const tokens=[...new Set((profiles||[]).filter(x=>x.chainId==='solana').map(x=>x.tokenAddress).filter(Boolean))].slice(0,30);if(!tokens.length)throw Error('No recent Solana profiles returned');status.textContent='Found '+tokens.length+' recent profiles. Loading market pairs…';const results=await Promise.allSettled(tokens.map(async a=>{const x=await fetch(API+'/token-pairs/v1/solana/'+encodeURIComponent(a));return x.ok?x.json():[]}));const arr=results.flatMap(x=>x.status==='fulfilled'?x.value:[]);render(arr);status.textContent='Discovery complete: '+uniquePairs(arr).length+' unique Solana tokens from recent profiles.'}catch(e){status.textContent='Discovery failed: '+e.message+' — check your connection and retry.'}}
+async function loadTrending(){const status=document.getElementById('status');status.textContent='Loading market search results…';try{const r=await fetch(API+'/latest/dex/search?q=solana');if(!r.ok)throw Error('Search API returned '+r.status);const d=await r.json();const arr=(d.pairs||[]).filter(p=>p.chainId==='solana');render(arr);status.textContent='Market search complete: '+uniquePairs(arr).length+' tokens shown. This is not a complete market ranking.'}catch(e){status.textContent='Market search failed: '+e.message}}
+async function searchToken(){const q=document.getElementById('query').value.trim();if(!q)return;const status=document.getElementById('status');status.textContent='Searching…';try{const r=await fetch(API+'/latest/dex/search?q='+encodeURIComponent(q));if(!r.ok)throw Error('Search API returned '+r.status);const d=await r.json();const arr=(d.pairs||[]).filter(p=>p.chainId==='solana');render(arr);status.textContent='Search complete: '+uniquePairs(arr).length+' Solana tokens found.'}catch(e){status.textContent='Search failed: '+e.message}}
+async function analyzeHolders(mint){const el=document.getElementById('holderResult');el.innerHTML='Checking public security/holder report for <b>'+safe(mint)+'</b>…';try{const r=await fetch('https://api.rugcheck.xyz/v1/tokens/'+encodeURIComponent(mint)+'/report');if(!r.ok)throw Error('Report unavailable (HTTP '+r.status+')');const d=await r.json();let top=d.topHolders||d.top_holders||[];let holders='UNKNOWN — report did not expose a readable holder list.';if(Array.isArray(top)&&top.length){const vals=top.slice(0,10).map(h=>Number(h.pct??h.percentage??h.amount_percentage)).filter(Number.isFinite);if(vals.length)holders='Top reported holder percentages: '+vals.map(v=>v.toFixed(2)+'%').join(', ')+'.';}const risks=(d.risks||[]).slice(0,8).map(x=>safe(x.name||x.description||x.level||'Risk item'));el.innerHTML='<b>Report:</b> available<br><b>Holder concentration:</b> '+safe(holders)+'<br><b>Risk score:</b> '+safe(d.score??'UNKNOWN')+'<br><b>Token authorities / risks:</b> '+(risks.length?risks.join('; '):'See full report; no risk items were returned in the expected format.')+'<br><a target="_blank" rel="noopener" href="https://rugcheck.xyz/tokens/'+encodeURIComponent(mint)+'">Open RugCheck report ↗</a><p class="muted">This report may be incomplete. Wallets can include pools, exchanges, team wallets, or burn addresses; percentages need interpretation.</p>'}catch(e){el.innerHTML='<b>Holder/security data: UNKNOWN</b><br>'+safe(e.message)+'. This does not mean the token is safe or unsafe. Try the token on <a href="https://rugcheck.xyz/" target="_blank" rel="noopener">RugCheck</a> and verify on-chain data independently.'}}
+function paperBuy(mint){const p=pairsByMint.get(mint);if(!p)return;const price=Number(p.priceUsd)||0,amount=Number(document.getElementById('paperAmount').value)||0;if(price<=0||amount<=0){alert('Cannot paper buy: price or amount is invalid.');return}if(amount>paper.cash){alert('Not enough paper cash.');return}const pos=paper.positions[mint]||{mint,name:p.baseToken.name||p.baseToken.symbol||mint,symbol:p.baseToken.symbol||'TOKEN',qty:0,cost:0};const qty=amount/price;pos.qty+=qty;pos.cost+=amount;pos.name=p.baseToken.name||pos.name;pos.symbol=p.baseToken.symbol||pos.symbol;paper.positions[mint]=pos;paper.cash-=amount;savePaper();alert('Paper buy recorded for '+pos.symbol+'. No real trade was made.')}
+function paperSell(mint){const pos=paper.positions[mint],p=pairsByMint.get(mint);if(!pos||!p)return;const price=Number(p.priceUsd)||0;if(price<=0){alert('Current price unavailable; cannot calculate paper sale.');return}const proceeds=pos.qty*price;paper.cash+=proceeds;paper.realized+=proceeds-pos.cost;delete paper.positions[mint];savePaper()}
+function updatePaper(){let value=paper.cash,unreal=0;const positions=Object.values(paper.positions);positions.forEach(pos=>{const p=pairsByMint.get(pos.mint),price=Number(p?.priceUsd)||0;value+=pos.qty*price;unreal+=pos.qty*price-pos.cost});document.getElementById('cashValue').textContent=money(paper.cash);document.getElementById('portfolioValue').textContent=money(value);document.getElementById('positionCount').textContent=positions.length;const u=document.getElementById('unrealized');u.textContent=money(unreal);u.className='value '+(unreal>=0?'green':'red');const rr=document.getElementById('realized');rr.textContent=money(paper.realized);rr.className='value '+(paper.realized>=0?'green':'red');const el=document.getElementById('positions');if(!positions.length){el.textContent='No open paper positions. Tap Paper buy on a token to simulate a trade.';return}el.innerHTML=positions.map(pos=>{const p=pairsByMint.get(pos.mint),price=Number(p?.priceUsd)||0,val=pos.qty*price,pl=val-pos.cost;return '<div class="position"><b>'+safe(pos.symbol)+'</b> — '+safe(pos.name)+'<br>Cost: '+money(pos.cost)+' · Current value: '+money(val)+' · P/L: <span class="'+(pl>=0?'green':'red')+'">'+money(pl)+'</span><br><small>'+safe(pos.mint)+'</small><br><button class="secondary" onclick="paperSell(\''+safe(pos.mint)+'\')">Sell position (paper)</button></div>'}).join('')}
+function resetPaper(){if(!confirm('Reset simulated cash, positions, and P/L to $1,000? This cannot be undone.'))return;paper={cash:1000,realized:0,positions:{}};savePaper()}
 discover();
 </script>
 </body>
