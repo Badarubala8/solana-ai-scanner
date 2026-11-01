@@ -78,8 +78,10 @@
 </main>
 <script>
 const API='https://api.dexscreener.com';
-async async function fetchWithTimeout(url,options={}){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),10000);try{return await fetch(url,{...options,signal:controller.signal})}finally{clearTimeout(timer)}}
-let pairsByMint=new Map();\nlet showRejected=false;\nlet lastPairs=[];
+async function fetchWithTimeout(url,options={}){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),10000);try{return await fetch(url,{...options,signal:controller.signal})}finally{clearTimeout(timer)}}
+let pairsByMint=new Map();
+let showRejected=false;
+let lastPairs=[];
 let paper=loadPaper();
 function loadPaper(){try{return JSON.parse(localStorage.getItem('solanaScannerPaperV1'))||{cash:1000,realized:0,positions:{}}}catch(e){return {cash:1000,realized:0,positions:{}}}}
 function savePaper(){localStorage.setItem('solanaScannerPaperV1',JSON.stringify(paper));updatePaper()}
