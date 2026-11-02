@@ -15,7 +15,15 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204).end();
     return;
   }
-  if (url.pathname === "/health") {
+  if (url.pathname === "/" && req.method === "GET") {
+    res.writeHead(200).end(JSON.stringify({
+      ok: true,
+      service: "Solana AI Scanner API",
+      message: "API is running. Use /health to check status and /api/wallet-activity?address=PUBLIC_SOLANA_WALLET to retrieve recent public wallet activity."
+    }));
+    return;
+  }
+  if (url.pathname === "/health" && req.method === "GET") {
     res.writeHead(200).end(JSON.stringify({ ok: true, service: "solana-ai-scanner-api" }));
     return;
   }
